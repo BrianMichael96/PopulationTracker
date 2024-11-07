@@ -10,27 +10,115 @@ import XCTest
 
 final class USAPopulationTests: XCTestCase {
 
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-    }
+    var service: USADataServiceMock!
+    var url: USADataRequests.PopulationData!
+    
+    let nationParameters = USADataParameters(drilldowns: "Nation", measures: "Population")
+    let stateParameters = USADataParameters(drilldowns: "State", measures: "Population")
 
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+    override func setUp() {
+        super.setUp()
+        service = USADataServiceMock()
     }
-
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
+    
+    override func tearDown() {
+        service = nil
+        super.tearDown()
     }
+    
+    func testGetPopulationDataFailure() async {
+        let parameters = USADataParameters(drilldowns: "", measures: "")
+        let result = await service.getPopulationData(headers: nil, parameters: parameters)
 
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
+        switch result {
+        case .success:
+            XCTFail("Expected failure for invalid data, but got success")
+        case .failure(let error):
+            XCTAssertEqual(error, .invalidURL)
+            XCTAssertNotNil(error, "Expected error, but got nil")
+        }
+    }
+    
+    func testGetPopulationDataForNation() async {
+        let result = await service.getPopulationData(headers: nil, parameters: nationParameters)
+
+        switch result {
+        case .success(let response):
+            XCTAssertNotNil(response.data?.first?.idNation)
+            XCTAssertNotNil(response.data?.first?.nation)
+        case .failure:
+            XCTFail("Expected success for nation data, but got failure")
+        }
+    }
+    
+    func testGetPopulationDataForNationShouldReturnNilForState() async {
+        let result = await service.getPopulationData(headers: nil, parameters: nationParameters)
+
+        switch result {
+        case .success(let response):
+            XCTAssertNil(response.data?.first?.idState)
+            XCTAssertNil(response.data?.first?.state)
+        case .failure:
+            XCTFail("Expected success for nation data, but got failure")
+        }
+    }
+    
+    func testGetPopulationDataForStateShouldReturnNilForNation() async {
+        let result = await service.getPopulationData(headers: nil, parameters: stateParameters)
+
+        switch result {
+        case .success(let response):
+            XCTAssertNil(response.data?.first?.idNation)
+            XCTAssertNil(response.data?.first?.nation)
+        case .failure:
+            XCTFail("Expected success for nation data, but got failure")
         }
     }
 
+    func testGetPopulationDataForState() async {
+        let result = await service.getPopulationData(headers: nil, parameters: stateParameters)
+
+        switch result {
+        case .success(let response):
+            XCTAssertNotNil(response.data?.first?.idState)
+            XCTAssertNotNil(response.data?.first?.state)
+        case .failure:
+            XCTFail("Expected success for state data, but got failure")
+        }
+    }
+    
+    func testGetPopulationDataForNationYearLatest() async {
+        let parameters = USADataParameters(drilldowns: "Nation", measures: "Population", year: "latest")
+        let result = await service.getPopulationData(headers: nil, parameters: parameters)
+
+        switch result {
+        case .success(let response):
+            XCTAssertEqual(response.data?.first?.year, "2022")
+        case .failure:
+            XCTFail("Expected success for latest nation data, but got failure")
+        }
+    }
+    
+    func testGetPopulationDataForStateYearLatest() async {
+        let parameters = USADataParameters(drilldowns: "State", measures: "Population", year: "latest")
+        let result = await service.getPopulationData(headers: nil, parameters: parameters)
+
+        switch result {
+        case .success(let response):
+            XCTAssertEqual(response.data?.first?.year, "2022")
+        case .failure:
+            XCTFail("Expected success for latest state data, but got failure")
+        }
+    }
+    func testGetPopulationDataForStateYearEmpty() async {
+        let parameters = USADataParameters(drilldowns: "State", measures: "Population", year: "")
+        let result = await service.getPopulationData(headers: nil, parameters: parameters)
+
+        switch result {
+        case .success:
+            XCTFail("Expected failure for invalid data, but got success")
+        case .failure(let error):
+            XCTAssertNotNil(error, "Expected error, but got nil")
+        }
+    }
 }
